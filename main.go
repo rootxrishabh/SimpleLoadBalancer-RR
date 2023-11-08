@@ -9,13 +9,10 @@ import (
 )
 
 type Server interface {
-	// Address returns the address with which to access the server
 	Address() string
 
-	// IsAlive returns true if the server is alive and able to serve requests
 	IsAlive() bool
 
-	// Serve uses this server to process the request
 	Serve(rw http.ResponseWriter, req *http.Request)
 }
 
@@ -26,6 +23,8 @@ type serverItems struct {
 
 func (s *serverItems) Address() string { return s.addr }
 
+// The load balacer will always return true for IsAlive. Currently not handling any errors. "IsAlive" function to be updated.
+ 
 func (s *serverItems) IsAlive() bool { return true }
 
 func (s *serverItems) Serve(rw http.ResponseWriter, req *http.Request) {
@@ -56,9 +55,6 @@ func NewLoadBalancer(port string, servers []Server) *LoadBalancer {
 	}
 }
 
-// handleErr prints the error and exits the program
-// Note: this is not how one would want to handle errors in production, but
-// serves well for demonstration purposes.
 func handleErr(err error) {
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
@@ -66,8 +62,6 @@ func handleErr(err error) {
 	}
 }
 
-// getNextServerAddr returns the address of the next available server to send a
-// request to, using a simple round-robin algorithm
 func (lb *LoadBalancer) getNextAvailableServer() Server {
 	server := lb.servers[lb.roundRobinCount%len(lb.servers)]
 	for !server.IsAlive() {
@@ -82,18 +76,16 @@ func (lb *LoadBalancer) getNextAvailableServer() Server {
 func (lb *LoadBalancer) serveProxy(rw http.ResponseWriter, req *http.Request) {
 	targetServer := lb.getNextAvailableServer()
 
-	// could optionally log stuff about the request here!
 	fmt.Printf("forwarding request to address %q\n", targetServer.Address())
 
-	// could delete pre-existing X-Forwarded-For header to prevent IP spoofing
 	targetServer.Serve(rw, req)
 }
 
 func main() {
 	servers := []Server{
-		newserver("https://www.facebook.com"),
-		newserver("https://www.bing.com"),
-		newserver("https://www.duckduckgo.com"),
+		newserver("https://www.irctc.co.in"),
+		newserver("https://www.google.com"),
+		newserver("https://rootxrishabh.github.io"),
 	}
 
 	lb := NewLoadBalancer("8000", servers)
@@ -101,7 +93,6 @@ func main() {
 		lb.serveProxy(rw, req)
 	}
 
-	// register a proxy handler to handle all requests
 	http.HandleFunc("/", handleRedirect)
 
 	fmt.Printf("serving requests at 'localhost:%s'\n", lb.port)
